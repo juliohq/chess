@@ -1,9 +1,11 @@
 from PySide6.QtWidgets import *
 
+from .game import Moves
+
 
 class Window(QMainWindow):
     def __init__(self):
-        super().__init__()
+        super().__init__(windowTitle="Chess")
         self.widget = QWidget()
         self.layout = QVBoxLayout(self.widget)
         self.setCentralWidget(self.widget)
@@ -11,4 +13,6 @@ class Window(QMainWindow):
         self.show()
 
     def setup_ui(self):
-        pass
+        self.moves = Moves()
+        
+        self.layout.addWidget(self.moves)
