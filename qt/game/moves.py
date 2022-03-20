@@ -8,5 +8,5 @@ class Moves(QGroupBox):
         super().__init__(title="Moves", *args, **kwargs)
         self.layout = QVBoxLayout(self)
         self.table = MoveTable()
-        
+
         self.layout.addWidget(self.table)

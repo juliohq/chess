@@ -1,10 +1,27 @@
+import sys
+
+import chess
+import cli
 from chesspy import *
 from graphics import *
 
 
 class Game:
     def __init__(self):
-        self.chess_game = ChessGame()
+        if len(sys.argv) > 1:
+            result = cli.main()
 
-        self.game_window = GameWindow()
-        self.game_window.run()
+            play_as = result.play_as.lower()
+            ai = result.ai.lower()
+
+            if play_as in ["w", "white"]:
+                game = CLIGame(chess.WHITE, result.chess960, ai)
+            elif play_as in ["b", "black"]:
+                game = CLIGame(chess.BLACK, result.chess960, ai)
+        else:
+            self.chess_game = ChessGame()
+
+            self.game_window = GameWindow()
+            self.game_window.run()
+
+        game.start()

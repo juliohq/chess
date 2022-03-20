@@ -14,5 +14,5 @@ class Window(QMainWindow):
 
     def setup_ui(self):
         self.moves = Moves()
-        
+
         self.layout.addWidget(self.moves)

@@ -1,0 +1,7 @@
+SQUARE_WIDTH = 32
+SQUARE_HEIGHT = 32
+
+__all__ = [
+    "SQUARE_WIDTH",
+    "SQUARE_HEIGHT",
+]
