@@ -1,6 +1,6 @@
 import logging
 from functools import singledispatch
-from typing import Dict
+from typing import Dict, List
 
 import chess
 from treelib import Node, Tree
@@ -97,22 +97,27 @@ class Weakfish(AIPlayer):
 
         # Rate
         ratings: Dict[str, int] = {}
-        breakpoint()
-        while True:
-            for leave in tree.leaves():
-                if tree.level(leave.identifier) == 0:
+        while tree.depth() > 1:
+            leaves: List[Node] = tree.leaves()
+
+            for leave in leaves:
+                if tree.level(leave.identifier) == 1:
                     logger.debug("Rating finished")
+                    breakpoint()
                     break
+                else:
+                    pid = leave.predecessor(tree.identifier)
+                    # breakpoint() # pid, len(tree)
+                    tree.remove_node(leave.identifier)
+                    # breakpoint() # len(tree)
 
-                pid = str(leave.predecessor(tree).identifier)
+                    rate = self.rate(fake_board, leave.data)
+                    # breakpoint() # rate
 
-                removed = tree.remove_node(leave)
-                rate = self.rate(fake_board, leave.data)
-                breakpoint(rate)
-
-                if not pid in ratings:
-                    ratings[pid] = 0
-                ratings[pid] += rate
+                    if not pid in ratings:
+                        ratings[pid] = 0
+                    ratings[pid] += rate
+                    # breakpoint() # ratings
 
         # Find best move by its rating
         def get_rate(node: Node) -> int:
