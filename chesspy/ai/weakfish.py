@@ -1,7 +1,6 @@
 import logging
-import random
 from functools import singledispatch
-from typing import List, Optional
+from typing import Dict
 
 import chess
 from treelib import Node, Tree
@@ -20,7 +19,6 @@ class Weakfish(AIPlayer):
     @singledispatch
     def ask_to_move(self, board: chess.Board) -> chess.Move:
         fake_board = chess.Board(board.fen())
-        fake_board.turn = board.turn
         logger.debug("Fake board FEN: %s", board.fen())
 
         tree = Tree()
@@ -30,84 +28,101 @@ class Weakfish(AIPlayer):
             last_move = board.peek()
         except:
             pass
-        root = tree.create_node(
-            last_move.uci() if last_move else "root",
+
+        tree.create_node(
             last_move.uci() if last_move else "root",
             data=last_move,
         )
 
         result = None
-        depth_achieved = False
-        # fake_root = root
-        # current_depth_moves: List[chess.Move] = []
 
-        while not depth_achieved:
-            last_node: Node = None
-            
-            breakpoint()
-            tree.show()
+        while True:
+            leave_count = 0
+            depth_leaves_count = 0
+
+            for leave in tree.leaves():
+                leave_count += 1
+
+                if tree.level(leave.identifier) == self.depth - 1:
+                    depth_leaves_count += 1
+
+            if depth_leaves_count == leave_count:
+                logger.debug("Tree depth achieved")
+                break
+
             # Navigate though the current tree from the root
             logger.debug("Navigating though the tree")
-            for node in tree.expand_tree(last_node):
-                # Set last node
-                last_node = n.predecessor(tree) if last_node else root
-                logger.debug("Set last_node to %s", last_node)
-                
-                # Check the tree depth
-                if tree.depth() >= self.depth:
-                    logger.debug("Tree achieved the target depth")
-                    depth_achieved = True
-                    break
-                
-                logger.debug("Current node %s", node)
-                
+
+            # breakpoint()
+
+            for leave in tree.leaves():
+                # Check the leave depth
+                if tree.level(leave.identifier) >= self.depth - 1:
+                    logger.debug("Leave %s is out of the target depth", leave)
+                    continue
+
+                logger.debug("Current node %s", leave)
+
+                # breakpoint()
+
+                # Push move
+                if not leave.is_root():
+                    try:
+                        fake_board.pop()
+                    except:
+                        pass
+
+                    fake_board.push(leave.data)
+                    logger.debug("Pushed %s", leave.data)
+
+                # breakpoint()
+
                 # Get possible moves
                 moves = [move for move in fake_board.legal_moves]
                 logger.debug("Get possible moves")
-                
+
                 # Add possible moves
                 for move in moves:
                     uci = move.uci()
-                    n = tree.create_node(uci, parent=last_node if last_node else root)
+                    tree.create_node(
+                        uci,
+                        parent=leave,
+                        data=move,
+                    )
                     logger.debug(uci)
                 logger.debug("Possible moves added")
-            breakpoint()
 
-        # for depth in range(self.depth):
-        #     # Find moves for current state (White or Black)
-        #     moves = [move for move in fake_board.legal_moves]
-
-        #     # Populate current depth
-        #     logger.debug("Populating depth #%s", depth)
-        #     for move in moves:
-        #         pdb.set_trace()
-        #         tree.create_node(move.uci(), parent=fake_root, data=move)
-        #     logger.debug("Move count: %s", len(moves))
-
-        #     breakpoint()
-        #     # Go deeper in the tree
-        #     if len(tree.children(fake_root.identifier)) == len(current_depth_moves):
-        #         current_depth_moves.clear()
-        #         fake_board.pop()
-        #         fake_root = fake_root.predecessor(tree.identifier)
-
-        #     fake_root = random.choice(tree.children(fake_root))
-        #     fake_board.push(fake_root.data)
-        #     current_depth_moves.append(fake_root)
+                # Check overall tree depth
+                logger.debug("Check overall tree depth")
 
         # Rate
+        ratings: Dict[str, int] = {}
+        breakpoint()
+        while True:
+            for leave in tree.leaves():
+                if tree.level(leave.identifier) == 0:
+                    logger.debug("Rating finished")
+                    break
 
-        # Pruning
-        tree.rsearch()
+                pid = str(leave.predecessor(tree).identifier)
+
+                removed = tree.remove_node(leave)
+                rate = self.rate(fake_board, leave.data)
+                breakpoint(rate)
+
+                if not pid in ratings:
+                    ratings[pid] = 0
+                ratings[pid] += rate
 
         # Find best move by its rating
-        # tree.children()
+        def get_rate(node: Node) -> int:
+            return ratings[node.identifier]
 
-        return result if isinstance(result, chess.Move) else random.choice(moves)
+        result = max(tree.leaves(), key=get_rate).data
 
-    def rate(
-        self, board: chess.Board, move: chess.Move, tree: Optional[Tree] = None
-    ) -> int:
+        return result
+
+    def rate(self, board: chess.Board, move: chess.Move) -> int:
         rate = 0
 
         board.push(move)
