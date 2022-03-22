@@ -6,6 +6,7 @@ from typing import Dict
 import chess
 
 from .ai_player import AIPlayer
+from .rules import VALUES
 
 logger = logging.getLogger(__name__)
 
