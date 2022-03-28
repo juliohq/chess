@@ -18,7 +18,9 @@ OPONENTS = {
 
 
 class CLIGame(ChessGame):
-    def __init__(self, human=chess.WHITE, chess960=False, ai="plainfish", fen=chess.STARTING_FEN):
+    def __init__(
+        self, human=chess.WHITE, chess960=False, ai="plainfish", fen=chess.STARTING_FEN
+    ):
         oponent = OPONENTS.get(ai, Plainfish)
         if human == chess.WHITE:
             self.white_player = CLIPlayer()
