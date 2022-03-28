@@ -17,9 +17,13 @@ class Game:
                 fen = result.fen
 
             if play_as in ["w", "white"]:
-                game = CLIGame(chess.WHITE, result.chess960, ai, fen if fen else chess.STARTING_FEN)
+                game = CLIGame(
+                    chess.WHITE, result.chess960, ai, fen if fen else chess.STARTING_FEN
+                )
             elif play_as in ["b", "black"]:
-                game = CLIGame(chess.BLACK, result.chess960, ai, fen if fen else chess.STARTING_FEN)
+                game = CLIGame(
+                    chess.BLACK, result.chess960, ai, fen if fen else chess.STARTING_FEN
+                )
         else:
             self.chess_game = ChessGame()
 
