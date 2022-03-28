@@ -9,6 +9,7 @@ def main(args: Optional[List[str]] = sys.argv[1:]) -> argparse.Namespace:
     parser.add_argument("--play-as", metavar="COLOR", type=str, required=True)
     parser.add_argument("--chess960", action="store_true")
     parser.add_argument("--ai", type=str, default="plainfish")
+    parser.add_argument("--fen", type=str)
 
     result = parser.parse_args(args)
     return result

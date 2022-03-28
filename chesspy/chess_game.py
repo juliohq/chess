@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class ChessGame:
-    def __init__(self, human=chess.WHITE, chess960=False):
+    def __init__(self, human=chess.WHITE, chess960=False, fen=chess.STARTING_FEN):
         logger.debug("Creating chess game structure")
 
         logger.debug(
@@ -21,7 +21,7 @@ class ChessGame:
 
         self.players = [self.black_player, self.white_player]
 
-        self.board = chess.Board()
+        self.board = chess.Board(fen)
         logger.info("Chess board structure created")
 
         if chess960:

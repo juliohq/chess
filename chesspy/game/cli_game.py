@@ -18,7 +18,7 @@ OPONENTS = {
 
 
 class CLIGame(ChessGame):
-    def __init__(self, human=chess.WHITE, chess960=False, ai="plainfish"):
+    def __init__(self, human=chess.WHITE, chess960=False, ai="plainfish", fen=chess.STARTING_FEN):
         oponent = OPONENTS.get(ai, Plainfish)
         if human == chess.WHITE:
             self.white_player = CLIPlayer()
@@ -26,7 +26,7 @@ class CLIGame(ChessGame):
         else:
             self.white_player = oponent()
             self.black_player = CLIPlayer()
-        super().__init__(human, chess960)
+        super().__init__(human, chess960, fen)
 
     def start(self):
         super().start()
@@ -52,7 +52,7 @@ class CLIGame(ChessGame):
                     else:
                         self.print_board()
                 except Exception as e:
-                    print(e)
+                    logger.exception(e)
                     continue
             if exit or not self.board.is_legal(move):
                 break
