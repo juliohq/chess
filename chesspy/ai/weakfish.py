@@ -1,6 +1,5 @@
 import logging
 from functools import singledispatch
-from typing import Dict, List
 
 import chess
 from treelib import Node, Tree
@@ -18,9 +17,6 @@ class Weakfish(AIPlayer):
 
     @singledispatch
     def ask_to_move(self, board: chess.Board) -> chess.Move:
-        fake_board = chess.Board(board.fen())
-        logger.debug("Fake board FEN: %s", board.fen())
-
         tree = Tree()
 
         last_move = None
@@ -29,162 +25,131 @@ class Weakfish(AIPlayer):
         except:
             pass
 
+        # Create root node
         tree.create_node(
             last_move.uci() if last_move else "root",
-            data=last_move,
+            data=(board.fen(), last_move.uci() if last_move else "none"),
         )
 
-        result = None
+        self.populate(tree)
 
-        while True:
-            leave_count = 0
-            depth_leaves_count = 0
+        rates = []
+        children = tree.children(tree.root)
+
+        for child in children:
+            rates.append((child, self.minimax(tree, child, 1, False)))
+
+        best = min(rates, key=lambda rate: rate[1])
+        move = chess.Move.from_uci(best[0].data[1])
+
+        return move
+
+    def populate(self, tree: Tree):
+        # nodes = len(tree)
+
+        for i in range(self.depth):
+            # Check the overall tree depth
+            # if tree.depth() >= self.depth:
+            #     break
 
             for leave in tree.leaves():
-                leave_count += 1
+                # Check to see if the leave is behind (Alpha-Beta pruning)
+                # if tree.depth(leave) < tree.depth():
+                #     continue
 
-                if tree.level(leave.identifier) == self.depth - 1:
-                    depth_leaves_count += 1
+                # Bring back board state
+                b = chess.Board(leave.data[0])
 
-            if depth_leaves_count == leave_count:
-                logger.debug("Tree depth achieved")
-                break
-
-            # Navigate though the current tree from the root
-            logger.debug("Navigating though the tree")
-
-            # breakpoint()
-
-            for leave in tree.leaves():
-                # Check the leave depth
-                if tree.level(leave.identifier) >= self.depth - 1:
-                    logger.debug("Leave %s is out of the target depth", leave)
-                    continue
-
-                logger.debug("Current node %s", leave)
-
-                # breakpoint()
-
-                # Push move
-                if not leave.is_root():
-                    try:
-                        fake_board.pop()
-                    except:
-                        pass
-
-                    fake_board.push(leave.data)
-                    logger.debug("Pushed %s", leave.data)
-
-                # breakpoint()
-
-                # Get possible moves
-                moves = [move for move in fake_board.legal_moves]
-                logger.debug("Get possible moves")
-
-                # Add possible moves
-                for move in moves:
-                    uci = move.uci()
+                # Append new moves
+                for move in b.legal_moves:
+                    b.push(move)
                     tree.create_node(
-                        uci,
+                        move.uci(),
+                        data=(b.fen(), move.uci()),
                         parent=leave,
-                        data=move,
                     )
-                    logger.debug(uci)
-                logger.debug("Possible moves added")
+                    b.pop()
 
-                # Check overall tree depth
-                logger.debug("Check overall tree depth")
+                    if len(tree) % 1000 == 0:
+                        print(len(tree))
 
-        # Rate
-        ratings: Dict[str, int] = {}
-        while tree.depth() > 1:
-            leaves: List[Node] = tree.leaves()
+            # Check if all nodes were found
+            # if len(tree) == nodes:
+            #     break
 
-            for leave in leaves:
-                if tree.level(leave.identifier) == 1:
-                    logger.debug("Rating finished")
-                    breakpoint()
-                    break
-                else:
-                    pid = leave.predecessor(tree.identifier)
-                    # breakpoint() # pid, len(tree)
-                    tree.remove_node(leave.identifier)
-                    # breakpoint() # len(tree)
-
-                    rate = self.rate(fake_board, leave.data)
-                    # breakpoint() # rate
-
-                    if not pid in ratings:
-                        ratings[pid] = 0
-                    ratings[pid] += rate
-                    # breakpoint() # ratings
-
-        # Find best move by its rating
-        def get_rate(node: Node) -> int:
-            return ratings[node.identifier]
-
-        result = max(tree.leaves(), key=get_rate).data
-
-        return result
-
-    def rate(self, board: chess.Board, move: chess.Move) -> int:
+    def evaluate(self, move: chess.Move, fen: str) -> int:
         rate = 0
+        b = chess.Board(fen)
 
-        board.push(move)
+        # b.push(move)
 
         # Check conditionals
-        if board.is_checkmate():
-            rate += 1
-        else:
+        if b.is_checkmate():
             rate -= 1
-        if board.is_check():
-            rate += 1
-        else:
+
+        if b.is_check():
             rate -= 1
 
         # Stalemate conditionals
-        if board.is_stalemate():
+        if b.is_stalemate():
             rate -= 1
-        else:
-            rate += 1
 
         # Move possibilities
-        rate -= len([move for move in board.legal_moves])
+        # rate -= len([move for move in b.legal_moves])
 
-        board.pop()
+        # b.pop()
 
         # Capture conditionals
-        if board.is_capture(move):
-            piece_type = board.piece_type_at(move.to_square)
+        # if b.is_capture(move):
+        #     rate += 1
 
-            if piece_type in VALUES:
-                rate += VALUES[piece_type]
-        else:
-            rate -= 1
-
-        # Giving check conditionals
-        if board.gives_check(move):
-            rate += 1
+        # # Giving check conditionals
+        # if b.gives_check(move):
+        #     rate += 1
 
         # Attacked
-        if board.is_attacked_by(not board.turn, move.to_square):
-            piece_type = board.piece_type_at(move.from_square)
-
-            if piece_type in VALUES:
-                rate -= VALUES[piece_type]
-        else:
-            rate += 1
+        # if b.is_attacked_by(not b.turn, move.to_square):
+        #     rate -= 1
 
         # Move possibilities
-        rate += len([move for move in board.legal_moves])
+        rate += len([move for move in b.legal_moves])
 
         # Board control
-        if move.to_square in [
-            chess.D4,
-            chess.E4,
-            chess.D5,
-            chess.F5,
-        ]:
-            rate += 1
+        # if move.to_square in [
+        #     chess.D4,
+        #     chess.E4,
+        #     chess.D5,
+        #     chess.F5,
+        # ]:
+        #     rate += 1
 
         return rate
+
+    def minimax(self, tree: Tree, node: Node, depth: int, maximizing: bool) -> int:
+        if depth + 1 == tree.depth():
+            return self.best(tree, node)
+        # breakpoint()
+        if maximizing:
+            max_eval = -999
+            for n in tree.children(node.identifier):
+                value = self.minimax(tree, n, depth + 1, False)
+                max_eval = max([max_eval, value])
+            return max_eval
+        else:
+            min_eval = 999
+            for n in tree.children(node.identifier):
+                value = self.minimax(tree, n, depth + 1, True)
+                min_eval = min([min_eval, value])
+            return min_eval
+
+    def best(self, tree: Tree, node: Node, maximizing=True) -> int:
+        children = [n for n in tree.children(node.identifier)]
+        rates = [
+            self.evaluate(chess.Move.from_uci(child.data[1]), child.data[0])
+            for child in children
+        ]
+
+        if maximizing:
+            return max(rates)
+        else:
+            return min(rates)
