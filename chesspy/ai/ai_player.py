@@ -1,7 +1,6 @@
 from functools import singledispatch
 
 import chess
-from treelib import Node
 
 from ..player.player import Player
 
