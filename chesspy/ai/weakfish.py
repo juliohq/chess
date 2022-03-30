@@ -37,7 +37,7 @@ class Weakfish(AIPlayer):
         children = tree.children(tree.root)
 
         for child in children:
-            rates.append((child, self.minimax(tree, child, 1, False)))
+            rates.append((child, self.minimax(tree, child, 1, -999, 999, False)))
 
         best = min(rates, key=lambda rate: rate[1])
         move = chess.Move.from_uci(best[0].data[1])
@@ -54,11 +54,14 @@ class Weakfish(AIPlayer):
 
             for leave in tree.leaves():
                 # Check to see if the leave is behind (Alpha-Beta pruning)
-                # if tree.depth(leave) < tree.depth():
-                #     continue
+                if tree.depth(leave) + 1 < tree.depth():
+                    continue
 
                 # Bring back board state
                 b = chess.Board(leave.data[0])
+                
+                if b.legal_moves.count() == 0:
+                    return
 
                 # Append new moves
                 for move in b.legal_moves:
@@ -70,8 +73,7 @@ class Weakfish(AIPlayer):
                     )
                     b.pop()
 
-                    if len(tree) % 1000 == 0:
-                        print(len(tree))
+                    print(len(tree))
 
             # Check if all nodes were found
             # if len(tree) == nodes:
@@ -81,65 +83,68 @@ class Weakfish(AIPlayer):
         rate = 0
         b = chess.Board(fen)
 
-        # b.push(move)
+        next_moves = [m for m in b.legal_moves]
+
+        # for next in next_moves:
+        #     b.push(next)
+        #     if b.is_checkmate():
+        #         rate += 999
+        #     elif b.gives_check(next):
+        #         rate -= 400
+        #     b.pop()
 
         # Check conditionals
         if b.is_checkmate():
-            rate -= 1
-
-        if b.is_check():
-            rate -= 1
-
+            rate -= 999
+        elif b.is_check():
+            rate -= 400
         # Stalemate conditionals
-        if b.is_stalemate():
-            rate -= 1
+        elif b.is_stalemate():
+            rate -= 200
 
         # Move possibilities
-        # rate -= len([move for move in b.legal_moves])
-
-        # b.pop()
+        rate += len(next_moves)
 
         # Capture conditionals
-        # if b.is_capture(move):
-        #     rate += 1
-
-        # # Giving check conditionals
-        # if b.gives_check(move):
-        #     rate += 1
+        if b.is_capture(move):
+            rate += 1
 
         # Attacked
-        # if b.is_attacked_by(not b.turn, move.to_square):
-        #     rate -= 1
-
-        # Move possibilities
-        rate += len([move for move in b.legal_moves])
+        if b.is_attacked_by(not b.turn, move.to_square):
+            rate -= 1
 
         # Board control
-        # if move.to_square in [
-        #     chess.D4,
-        #     chess.E4,
-        #     chess.D5,
-        #     chess.F5,
-        # ]:
-        #     rate += 1
+        if move.to_square in [
+            chess.D4,
+            chess.E4,
+            chess.D5,
+            chess.F5,
+        ]:
+            rate += 1
 
         return rate
 
-    def minimax(self, tree: Tree, node: Node, depth: int, maximizing: bool) -> int:
+    def minimax(self, tree: Tree, node: Node, depth: int, alpha: int, beta: int, maximizing: bool) -> int:
         if depth + 1 == tree.depth():
             return self.best(tree, node)
         # breakpoint()
         if maximizing:
             max_eval = -999
             for n in tree.children(node.identifier):
-                value = self.minimax(tree, n, depth + 1, False)
+                value = self.minimax(tree, n, depth + 1, alpha, beta, False)
                 max_eval = max([max_eval, value])
+                alpha = max([alpha, value])
+                if beta <= alpha:
+                    break
             return max_eval
         else:
             min_eval = 999
             for n in tree.children(node.identifier):
-                value = self.minimax(tree, n, depth + 1, True)
+                value = self.minimax(tree, n, depth + 1, alpha, beta, True)
                 min_eval = min([min_eval, value])
+                beta = min([beta, value])
+                if beta <= alpha:
+                    break
             return min_eval
 
     def best(self, tree: Tree, node: Node, maximizing=True) -> int:
