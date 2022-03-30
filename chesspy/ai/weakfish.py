@@ -16,20 +16,14 @@ class Weakfish(AIPlayer):
 
     @singledispatch
     def ask_to_move(self, board: chess.Board) -> chess.Move:
-        last_move = None
-        try:
-            last_move = board.peek()
-        except:
-            pass
-
+        self.nodes = 0
         rates = []
 
         for move in board.legal_moves:
-            board.push(move)
             rates.append((move, self.minimax(board, move, 1, -999, 999, False)))
-            board.pop()
 
         best = min(rates, key=lambda rate: rate[1])
+        print("Nodes:", self.nodes)
 
         return best[0]
 
@@ -76,32 +70,36 @@ class Weakfish(AIPlayer):
         beta: int,
         maximizing: bool,
     ) -> int:
+        self.nodes += 1
         if depth == self.depth:
-            return self.best(board, node)
-        # breakpoint()
+            return self.best(board, maximizing)
         if maximizing:
             max_eval = -999
+            board.push(node)
             for move in board.legal_moves:
                 value = self.minimax(board, move, depth + 1, alpha, beta, False)
                 max_eval = max([max_eval, value])
                 alpha = max([alpha, value])
                 if beta <= alpha:
                     break
+            board.pop()
             return max_eval
         else:
             min_eval = 999
+            board.push(node)
             for move in board.legal_moves:
                 value = self.minimax(board, move, depth + 1, alpha, beta, True)
                 min_eval = min([min_eval, value])
                 beta = min([beta, value])
                 if beta <= alpha:
                     break
+            board.pop()
             return min_eval
 
-    def best(self, board: chess.Board, node: chess.Move, maximizing=True) -> int:
+    def best(self, board: chess.Board, maximizing=True) -> int:
         rates = [self.evaluate(move, board) for move in board.legal_moves]
 
         if maximizing:
             return max(rates)
         else:
-            return min(rates)
+            return -max(rates)
